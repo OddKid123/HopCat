@@ -37,6 +37,12 @@ image_width = int(player_image.get_width() * (image_height / player_image.get_he
 player_image = pygame.transform.scale(player_image, (image_width, image_height))
 player_rect.size = (image_width, image_height)  # Update player_rect size
 
+# create flipped player image
+player_image_flipped = pygame.transform.flip(player_image, True, False)
+
+# set up direction variable
+facing_right = False
+
 # set up platform properties
 platform_width = 100
 platform_height = 20
@@ -75,8 +81,10 @@ while running:
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
         player_velocity[0] = -player_speed
+        facing_right = False
     elif keys[pygame.K_d]:
         player_velocity[0] = player_speed
+        facing_right = True
     else:
         player_velocity[0] = 0
 
@@ -118,7 +126,13 @@ while running:
     pygame.draw.rect(screen, DARK_PINK, platform_rects[0])
     for platform_rect in platform_rects[1:]:
         pygame.draw.rect(screen, BROWN, platform_rect)
-    screen.blit(player_image, player_rect.topleft)  # Draw the player image instead of the white rectangle
+
+    # Draw the player image based on the facing_right variable
+    if facing_right:
+        screen.blit(player_image_flipped, player_rect.topleft)
+    else:
+        screen.blit(player_image, player_rect.topleft)
+
 
     # update display and tick clock
     pygame.display.update()
