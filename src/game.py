@@ -28,6 +28,15 @@ player_jump_height = 200
 player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
 player_velocity = [0, 0]
 
+# load player image
+player_image = pygame.image.load(os.path.join("src", "images", "player.png"))
+
+# scale player image
+image_height = 50
+image_width = int(player_image.get_width() * (image_height / player_image.get_height()))
+player_image = pygame.transform.scale(player_image, (image_width, image_height))
+player_rect.size = (image_width, image_height)  # Update player_rect size
+
 # set up platform properties
 platform_width = 100
 platform_height = 20
@@ -96,8 +105,8 @@ while running:
             elif player_velocity[1] < 0:  # Moving upwards
                 player_rect.top = platform_rect.bottom
                 player_velocity[1] = 0
-            break
-
+                break
+    
     # handle platform movement
     for platform_rect in platform_rects[1:]:
         platform_rect.move_ip(-platform_speed, 0)
@@ -109,7 +118,7 @@ while running:
     pygame.draw.rect(screen, DARK_PINK, platform_rects[0])
     for platform_rect in platform_rects[1:]:
         pygame.draw.rect(screen, BROWN, platform_rect)
-    pygame.draw.rect(screen, WHITE, player_rect)
+    screen.blit(player_image, player_rect.topleft)  # Draw the player image instead of the white rectangle
 
     # update display and tick clock
     pygame.display.update()
