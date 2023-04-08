@@ -31,12 +31,14 @@ player_velocity = [0, 0]
 # set up platform properties
 platform_width = 100
 platform_height = 20
-platform_speed = 1
+platform_speed = 3
 platform_rects = [
     pygame.Rect(0, WINDOW_HEIGHT - platform_height, WINDOW_WIDTH, platform_height),
     pygame.Rect(300, 450, platform_width, platform_height),
     pygame.Rect(450, 350, platform_width, platform_height),
     pygame.Rect(200, 250, platform_width, platform_height),
+    pygame.Rect(100, 150, platform_width, platform_height),
+    pygame.Rect(550, 100, platform_width, platform_height),
 ]
 
 # set up gravity properties
@@ -86,10 +88,14 @@ while running:
 
     # handle collisions
     for platform_rect in platform_rects:
-        if player_rect.colliderect(platform_rect) and player_velocity[1] > 0:
-            player_rect.bottom = platform_rect.top
-            player_velocity[1] = 0
-            jumping = False
+        if player_rect.colliderect(platform_rect):
+            if player_velocity[1] > 0:  # Moving downwards
+                player_rect.bottom = platform_rect.top
+                player_velocity[1] = 0
+                jumping = False
+            elif player_velocity[1] < 0:  # Moving upwards
+                player_rect.top = platform_rect.bottom
+                player_velocity[1] = 0
             break
 
     # handle platform movement
