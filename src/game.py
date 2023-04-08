@@ -1,95 +1,153 @@
-import pygame
 import os
+import pygame
 
-# Initialize Pygame
+# set up game window
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 600
+WINDOW_TITLE = "My Game"
 pygame.init()
+screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+pygame.display.set_caption(WINDOW_TITLE)
 
-# Set up the display
-display_width = 800
-display_height = 600
-game_display = pygame.display.set_mode((display_width, display_height))
-pygame.display.set_caption("My Game")
+# set up colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+DARK_PINK = (200, 20, 100)
+BROWN = (139, 69, 19)
 
-# Load the background image
-background_image = pygame.image.load(os.path.join(os.path.dirname(__file__), "images", "background.png")).convert()
-
-# Set up the floor
-floor_color = (233, 120, 145)
-floor_rect = pygame.Rect(0, display_height - 50, display_width, 50)
-
-# Set up the platforms
-platform_color = (139, 69, 19)
-platforms = [
-    pygame.Rect(0, display_height - 150, 200, 20),
-    pygame.Rect(300, display_height - 250, 200, 20),
-    pygame.Rect(500, display_height - 350, 200, 20)
-]
-
-# Set up the rectangle
-rect_width = 50
-rect_height = 50
-rect_x = display_width // 2
-rect_y = display_height // 2
-rect_speed = 300
-rect_color = (255, 0, 0)
-my_rect = pygame.Rect(rect_x, rect_y, rect_width, rect_height)
-my_rect_speed_y = 0
-
-# Set up gravity
-gravity = 500
-
-# Set up the clock
+# set up clock
 clock = pygame.time.Clock()
 
-# Main game loop
-game_running = True
-while game_running:
+# set up player properties
+player_size = 50
+player_x = WINDOW_WIDTH // 2 - player_size // 2
+player_y = WINDOW_HEIGHT - player_size - 50
+player_speed = 5
+player_jump_speed = 12
+player_jump_height = 200
+player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
 
-    # Event handling
+# set up platform properties
+platform_width = 100
+platform_height = 20
+platform_speed = 1
+platform_rects = [
+    pygame.Rect(0, WINDOW_HEIGHT - platform_height, WINDOW_WIDTH, platform_height),
+    pygame.Rect(300, 450, platform_width, platform_height),
+    pygame.Rect(450, 350, platform_width, platform_height),
+    pygame.Rect(200, 250, platform_width, platform_height),
+]
+
+# set up gravity properties
+gravity = 0.5
+jumping = False
+jump_counter = 0
+
+# load background image
+background_image = pygame.image.load(os.path.join("src", "images", "background.png")).convert()
+
+# game loop
+running = True
+while running:
+    # handle events
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            game_running = False
+            running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and not jumping:
+                jumping = True
+                jump_counter = 0
 
-    # Movement
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_a]:
-        my_rect.x -= rect_speed * clock.get_time() / 1000
-    elif keys[pygame.K_d]:
-        my_rect.x += rect_speed * clock.get_time() / 1000
 
-    # Jumping
-    if keys[pygame.K_SPACE] and my_rect.bottom >= floor_rect.top:
-        my_rect_speed_y = -600
+    # Player movement
+    player_y_change = 0
 
-    # Apply gravity
-    my_rect_speed_y += gravity * clock.get_time() / 1000
-    my_rect.y += my_rect_speed_y * clock.get_time() / 1000
+    if event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_SPACE:
+            # Set player_y_change to a positive value to simulate gravity pulling the player down
+            player_y_change = 8
+    elif event.type == pygame.KEYUP:
+        if event.key == pygame.K_SPACE:
+            # Gradually decrease player_y_change to slow down player's upward motion and reverse direction
+            for i in range(player_y_change):
+                player_y_change -= 1
 
-    # Check for collision with the floor
-    if my_rect.bottom > floor_rect.top:
-        my_rect.bottom = floor_rect.top
-        my_rect_speed_y = 0
+    player_y += player_y_change
 
-    # Check for collision with the platforms
-    for platform in platforms:
-        if my_rect.colliderect(platform):
-            if my_rect_speed_y > 0:
-                my_rect.bottom = platform.top
-                my_rect_speed_y = 0
-            elif my_rect_speed_y < 0:
-                my_rect.top = platform.bottom
-                my_rect_speed_y = 0
+    # handle jumping
+    if jumping:
+        player_rect.move_ip(0, -player_jump_speed)
+        jump_counter += player_jump_speed
+        if jump_counter >= player_jump_height:
+            jumping = False
 
-    # Drawing
-    game_display.blit(background_image, (0, 0))
-    pygame.draw.rect(game_display, floor_color, floor_rect)
-    for platform in platforms:
-        pygame.draw.rect(game_display, platform_color, platform)
-    pygame.draw.rect(game_display, rect_color, my_rect)
+    # handle gravity
+    if not jumping:
+        player_rect.move_ip(0, gravity)
+        for platform_rect in platform_rects:
+            if player_rect.colliderect(platform_rect):
+                if gravity > 0:
+                    player_rect.bottom = platform_rect.top
+                    jumping = False
+                else:
+                    player_rect.top = platform_rect.bottom
+                break
+
+    # handle platform movement
+    for platform_rect in platform_rects[1:]:
+        platform_rect.move_ip(-platform_speed, 0)
+        if platform_rect.right < 0:
+            platform_rect.left = WINDOW_WIDTH
+
+    # draw game objects
+    screen.blit(background_image, (0, 0))
+    pygame.draw.rect(screen, DARK_PINK, platform_rects[0])
+    for platform_rect in platform_rects[1:]:
+        pygame.draw.rect(screen, BROWN, platform_rect)
+    pygame.draw.rect(screen, WHITE, player_rect)
+
+    # handle jumping
+    if jumping:
+        player_rect.move_ip(0, -player_jump_speed)
+        jump_counter += player_jump_speed
+        if jump_counter >= player_jump_height:
+            jumping = False
+
+    # handle gravity
+    if not jumping:
+        player_rect.move_ip(0, gravity)
+        on_platform = False
+        for platform_rect in platform_rects:
+            if player_rect.colliderect(platform_rect):
+                on_platform = True
+                if gravity > 0:
+                    player_rect.bottom = platform_rect.top
+                else:
+                    player_rect.top = platform_rect.bottom
+                break
+
+        if not on_platform:
+            gravity += 0.5
+        else:
+            gravity = 0.5
+
+    # handle platform movement
+    for platform_rect in platform_rects[1:]:
+        platform_rect.move_ip(-platform_speed, 0)
+        if platform_rect.right < 0:
+            platform_rect.left = WINDOW_WIDTH
+
+    # draw game objects
+    screen.blit(background_image, (0, 0))
+    pygame.draw.rect(screen, DARK_PINK, platform_rects[0])
+    for platform_rect in platform_rects[1:]:
+        pygame.draw.rect(screen, BROWN, platform_rect)
+    pygame.draw.rect(screen, WHITE, player_rect)
+
+    # update display and tick clock
     pygame.display.update()
-
-    # Limit the frame rate
     clock.tick(60)
 
-# Clean up
+# quit pygame and exit program
 pygame.quit()
+exit()
