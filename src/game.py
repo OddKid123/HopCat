@@ -29,6 +29,7 @@ WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 WINDOW_TITLE = "My Game"
 pygame.init()
+print("Pygame initialized.")
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption(WINDOW_TITLE)
 
@@ -90,9 +91,20 @@ background_image = pygame.image.load(os.path.join("src", "images", "background.p
 # Set up the list for coins
 coins = pygame.sprite.Group()
 
+# Set up the score display
+score = 0
+high_score = 0
+score_font = pygame.font.Font(None, 36)
+
+def draw_score():
+    score_text = score_font.render("Score: " + str(score), True, WHITE)
+    high_score_text = score_font.render("High Score: " + str(high_score), True, WHITE)
+    screen.blit(score_text, (10, 10))
+    screen.blit(high_score_text, (WINDOW_WIDTH - 250, 10))
+
 # Generate coins randomly above the platforms
-def generate_coins():
-    for platform_rect in platform_rects[1:]:
+def generate_coins(platform_rects):
+    for platform_rect in platform_rects:
         num_coins = random.randint(0, 3)
         for i in range(num_coins):
             coin_x = platform_rect.x + (platform_rect.width // (num_coins + 1)) * (i + 1)
@@ -100,28 +112,22 @@ def generate_coins():
             coin = Coin(coin_x, coin_y)
             coins.add(coin)
 
-generate_coins()
+generate_coins(platform_rects)
 
-# Set up the score display
-score = 0
-score_font = pygame.font.Font(None, 36)
-
-# game loop
+# main game loop
 running = True
 while running:
-    # handle events
+    screen.fill(BLACK)
+    screen.blit(background_image, (0, 0))
+
+    # event handling
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                player_velocity[1] = -player_jump_speed
 
-    # handle gravity
-    player_velocity[1] += gravity
-
-    # handle movement
+    # player movement
     keys = pygame.key.get_pressed()
+
     if keys[pygame.K_a]:
         player_velocity[0] = -player_speed
         facing_right = False
@@ -131,80 +137,65 @@ while running:
     else:
         player_velocity[0] = 0
 
-    # Move player and check for collisions with the screen edges
-    player.rect.move_ip(player_velocity[0], player_velocity[1])
+    if keys[pygame.K_SPACE]:
+        player_velocity[1] = -player_jump_speed
 
-    if player.rect.left < 0:
-        player.rect.left = 0
-    if player.rect.right > WINDOW_WIDTH:
-        player.rect.right = WINDOW_WIDTH
-    if player.rect.top < 0:
-        player.rect.top = 0
-    if player.rect.bottom > WINDOW_HEIGHT:
-        player.rect.bottom = WINDOW_HEIGHT
+    player.rect.x += player_velocity[0]
+    player.rect.y += player_velocity[1]
 
-    # handle platform collision
-    for platform_rect in platform_rects:
+    # gravity
+    player_velocity[1] += gravity
+
+    # handle platform collision and reset score if player touches the ground
+    for index, platform_rect in enumerate(platform_rects):
         if player.rect.colliderect(platform_rect) and player_velocity[1] > 0:
             player.rect.bottom = platform_rect.top
             player_velocity[1] = 0
-            if platform_rect == platform_rects[0]:
+            if index == 0:
                 score = 0
             break
 
+
     # handle platform movement
-    def regenerate_platform(platform_rect):
-        platform_rect.left = WINDOW_WIDTH
-        generate_coins_for_platform(platform_rect)
-
-    def generate_coins_for_platform(platform_rect):
-        num_coins = random.randint(0, 3)
-        for i in range(num_coins):
-            coin_x = platform_rect.x + (platform_rect.width // (num_coins + 1)) * (i + 1)
-            coin_y = platform_rect.y - 20
-            coin = Coin(coin_x, coin_y)
-            coins.add(coin)
-
     for platform_rect in platform_rects[1:]:
-        platform_rect.move_ip(-platform_speed, 0)
+        platform_rect.x -= platform_speed
         if platform_rect.right < 0:
-            regenerate_platform(platform_rect)
+            platform_rect.left = WINDOW_WIDTH
+            generate_coins([platform_rect])  # Generate coins for the new platform
 
     # update coins
     coins.update()
 
-    # Check for collisions between the player and coins, and increase the score if a coin is collected
-    coins_collected = pygame.sprite.spritecollide(player, coins, True)
-    score += len(coins_collected)
+    # collision detection for coins
+    for coin in coins:
+        if player.rect.colliderect(coin.rect):
+            score += 1
+            if score > high_score:
+                high_score = score
+            coins.remove(coin)
 
-    # draw game objects
-    screen.blit(background_image, (0, 0))
-    pygame.draw.rect(screen, DARK_PINK, platform_rects[0])
-    for platform_rect in platform_rects[1:]:
+   # check if player touches the ground and reset the score
+    if player.rect.colliderect(platform_rects[0]) and player_velocity[1] >= 0:
+        score = 0
+
+
+    # draw platforms
+    for platform_rect in platform_rects:
         pygame.draw.rect(screen, BROWN, platform_rect)
 
-    # Draw the player image based on the facing_right variable
+    # draw player
     if facing_right:
-        screen.blit(player_image_flipped, player.rect.topleft)
+        screen.blit(player_image, (player.rect.x, player.rect.y))
     else:
-        screen.blit(player_image, player.rect.topleft)
+        screen.blit(player_image_flipped, (player.rect.x, player.rect.y))
 
-    # Draw the coins
+    # draw coins
     coins.draw(screen)
 
-    # Draw the score in the upper left side of the screen
-    score_text = score_font.render(f'Score: {score}', True, WHITE)
-    screen.blit(score_text, (10, 10))
+    # draw score
+    draw_score()
 
-    # update display and tick clock
-    pygame.display.update()
+    pygame.display.flip()
     clock.tick(60)
 
-# quit pygame and exit program
 pygame.quit()
-exit()
-
-
-
-
-
