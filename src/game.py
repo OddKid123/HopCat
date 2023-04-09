@@ -24,6 +24,17 @@ class Coin(pygame.sprite.Sprite):
     def update(self):
         self.rect.x -= platform_speed
 
+def load_high_score():
+    try:
+        with open("high_score.txt", "r") as file:
+            return int(file.read())
+    except FileNotFoundError:
+        return 0
+
+def save_high_score(high_score):
+    with open("high_score.txt", "w") as file:
+        file.write(str(high_score))
+
 # set up game window
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
@@ -93,7 +104,7 @@ coins = pygame.sprite.Group()
 
 # Set up the score display
 score = 0
-high_score = 0
+high_score = load_high_score()
 score_font = pygame.font.Font(None, 36)
 
 def draw_score():
@@ -146,15 +157,25 @@ while running:
     # gravity
     player_velocity[1] += gravity
 
+    # prevent player from passing through the top edge of the window
+    if player.rect.y < 0:
+        player.rect.y = 0
+        player_velocity[1] = 0
+
     # handle platform collision and reset score if player touches the ground
     for index, platform_rect in enumerate(platform_rects):
+        # Colliding from above
         if player.rect.colliderect(platform_rect) and player_velocity[1] > 0:
             player.rect.bottom = platform_rect.top
             player_velocity[1] = 0
             if index == 0:
                 score = 0
             break
-
+        # Colliding from below
+        elif player.rect.colliderect(platform_rect) and player_velocity[1] < 0:
+            player.rect.top = platform_rect.bottom
+            player_velocity[1] = 0
+            break
 
     # handle platform movement
     for platform_rect in platform_rects[1:]:
@@ -172,12 +193,8 @@ while running:
             score += 1
             if score > high_score:
                 high_score = score
+                save_high_score(high_score)
             coins.remove(coin)
-
-   # check if player touches the ground and reset the score
-    if player.rect.colliderect(platform_rects[0]) and player_velocity[1] >= 0:
-        score = 0
-
 
     # draw platforms
     for platform_rect in platform_rects:
@@ -185,9 +202,9 @@ while running:
 
     # draw player
     if facing_right:
-        screen.blit(player_image, (player.rect.x, player.rect.y))
-    else:
         screen.blit(player_image_flipped, (player.rect.x, player.rect.y))
+    else:
+        screen.blit(player_image, (player.rect.x, player.rect.y))
 
     # draw coins
     coins.draw(screen)
@@ -197,5 +214,5 @@ while running:
 
     pygame.display.flip()
     clock.tick(60)
-
 pygame.quit()
+
